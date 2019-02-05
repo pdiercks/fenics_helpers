@@ -1,5 +1,5 @@
 import numpy as np
-from dolfin import Function
+from dolfin import Function, info
 
 
 class Progress:
