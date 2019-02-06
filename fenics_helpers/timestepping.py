@@ -127,7 +127,7 @@ class EquidistantTimeStepping:
     def run(self, t_end, dt, t_start=0.0, checkpoints=[], show_bar=False):
         progress = Progress(t_start, t_end, show_bar)
 
-        points_in_time = np.hstack((np.arange(t_start, t_end, dt), t_end))
+        points_in_time = np.append(np.arange(t_start, t_end, dt), t_end)
         checkpoints = np.unique(np.sort(checkpoints))
         if checkpoints.size != 0:
             if checkpoints.max() > t_end or checkpoints.min() < t_start:
@@ -135,7 +135,7 @@ class EquidistantTimeStepping:
             if np.isclose(checkpoints, t_start).any():
                 remaining = np.logical_not(np.isclose(checkpoints, t_start))
                 checkpoints = checkpoints[remaining]
-            points_in_time = np.hstack((points_in_time, checkpoints))
+            points_in_time = np.append(points_in_time, checkpoints)
 
         for t in np.sort(points_in_time):
             num_iter, converged = self._solve(t)
