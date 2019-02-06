@@ -27,7 +27,7 @@ class TestEquidistant(unittest.TestCase):
         self.equidistant._post_process = pp
         self.assertTrue(self.equidistant.run(5.0, 1.0, checkpoints=checkpoints))
         for checkpoint in checkpoints:
-            self.assertTrue(np.isclose(visited_timesteps, checkpoint).any())
+            self.assertTrue(np.isclose(visited_timesteps, checkpoint, atol=1e-6).any())
 
     @given(st.lists(st.floats(max_value=0.0, exclude_max=True), min_size=1))
     def test_equidistant_too_low_checkpoints(self, checkpoints):
