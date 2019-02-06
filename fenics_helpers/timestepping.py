@@ -55,9 +55,13 @@ class AdaptiveTimeStepping:
         self._post_process = post_process
         self._u = u
 
-    def run(self, t_end, t_start=0.0, dt0=None, show_bar=False):
+    def run(self, t_end, t_start=0.0, dt0=None, checkpoints=None, show_bar=False):
         if dt0 is None:
             dt0 = self.dt_max
+
+        if checkpoints is not None:
+            checkpoints = np.sort(checkpoints)
+            current_checkpoint = 0
 
         dt = dt0
 
@@ -66,13 +70,21 @@ class AdaptiveTimeStepping:
 
         progress = Progress(t_start, t_end, show_bar)
         while t < t_end:
-            t += dt
+            if checkpoints is not None and checkpoints[current_checkpoint] < t + dt:
+                t = checkpoints[current_checkpoint]
+            else:
+                t += dt
 
             num_iter, converged = self._solve(t)
             if converged:
                 progress.success(t, dt, num_iter)
                 u_prev.assign(self._u)
                 self._post_process(t)
+
+                if checkpoints is not None and t == checkpoints[current_checkpoint]:
+                    current_checkpoint += 1
+                    if current_checkpoint == len(checkpoints):
+                        checkpoints = None
 
                 # increase the time step for fast convergence
                 if num_iter < self.increase_num_iter and dt < self.dt_max:
@@ -105,9 +117,12 @@ class EquidistantTimeStepping:
         self._solve = solve
         self._post_process = post_process
 
-    def run(self, t_end, dt, t_start=0.0, show_bar=False):
+    def run(self, t_end, dt, t_start=0.0, checkpoints=None, show_bar=False):
         progress = Progress(t_start, t_end, show_bar)
-        for t in np.append(np.arange(t_start, t_end, dt), t_end):
+        points_in_time = np.hstack((np.arange(t_start, t_end, dt), t_end))
+        if checkpoints is not None:
+            points_in_time = np.hstack((points_in_time, checkpoints))
+        for t in np.sort(points_in_time):
             num_iter, converged = self._solve(t)
             if converged:
                 progress.success(t, dt, num_iter)
