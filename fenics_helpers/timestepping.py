@@ -55,13 +55,9 @@ class AdaptiveTimeStepping:
         self._post_process = post_process
         self._u = u
 
-    def run(self, t_end, t_start=0.0, dt0=None, checkpoints=None, show_bar=False):
+    def run(self, t_end, t_start=0.0, dt0=None, checkpoints=[], show_bar=False):
         if dt0 is None:
             dt0 = self.dt_max
-
-        if checkpoints is not None:
-            checkpoints = np.sort(checkpoints)
-            current_checkpoint = 0
 
         dt = dt0
 
@@ -69,9 +65,22 @@ class AdaptiveTimeStepping:
         t = t_start
 
         progress = Progress(t_start, t_end, show_bar)
+
+        checkpoints = np.array(checkpoints)
+        if checkpoints.size != 0:
+            if checkpoints.max() > t_end or checkpoints.min() < t_start:
+                raise RuntimeError("Checkpoints outside of integration range.")
+            checkpoints = np.sort(np.unique(np.around(checkpoints, 6)))
+            if np.any(checkpoints < t_start + self.dt_min):
+                remaining = checkpoints >= t_start + self.dt_min
+                checkpoints = checkpoints[remaining]
+                self._post_process(t)
+
+
         while t < t_end:
-            if checkpoints is not None and checkpoints[current_checkpoint] < t + dt:
-                t = checkpoints[current_checkpoint]
+            if checkpoints.size != 0 and checkpoints[0] < t + dt:
+                dt = checkpoints[0] - t
+                t = checkpoints[0]
             else:
                 t += dt
 
@@ -81,10 +90,8 @@ class AdaptiveTimeStepping:
                 u_prev.assign(self._u)
                 self._post_process(t)
 
-                if checkpoints is not None and t == checkpoints[current_checkpoint]:
-                    current_checkpoint += 1
-                    if current_checkpoint == len(checkpoints):
-                        checkpoints = None
+                if checkpoints.size != 0 and t == checkpoints[0]:
+                    checkpoints = np.delete(checkpoints, 0)
 
                 # increase the time step for fast convergence
                 if num_iter < self.increase_num_iter and dt < self.dt_max:
@@ -117,11 +124,19 @@ class EquidistantTimeStepping:
         self._solve = solve
         self._post_process = post_process
 
-    def run(self, t_end, dt, t_start=0.0, checkpoints=None, show_bar=False):
+    def run(self, t_end, dt, t_start=0.0, checkpoints=[], show_bar=False):
         progress = Progress(t_start, t_end, show_bar)
+
         points_in_time = np.hstack((np.arange(t_start, t_end, dt), t_end))
-        if checkpoints is not None:
+        checkpoints = np.unique(np.sort(checkpoints))
+        if checkpoints.size != 0:
+            if checkpoints.max() > t_end or checkpoints.min() < t_start:
+                raise RuntimeError("Checkpoints outside of integration range.")
+            if np.isclose(checkpoints, t_start).any():
+                remaining = np.logical_not(np.isclose(checkpoints, t_start))
+                checkpoints = checkpoints[remaining]
             points_in_time = np.hstack((points_in_time, checkpoints))
+
         for t in np.sort(points_in_time):
             num_iter, converged = self._solve(t)
             if converged:
