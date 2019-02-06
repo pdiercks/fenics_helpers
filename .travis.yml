@@ -8,4 +8,5 @@ before_script:
     - docker run -itd --name dock -v $(pwd):/home/fenics/shared fenicsproject/stable
 
 script:
+    - docker exec dock bash -c "pip3 install --user hypothesis"
     - docker exec dock bash -c "cd shared/tests && python3 -m unittest discover"

@@ -9,6 +9,7 @@ jobs:
       - run:
           name: run tests
           command: |
+              pip3 install --user hypothesis
               cd tests && python3 -m unittest discover
 
   build2017.2:
@@ -20,6 +21,7 @@ jobs:
       - run:
           name: run tests
           command: |
+              pip3 install --user hypothesis
               cd tests && python3 -m unittest discover
 
 workflows:
