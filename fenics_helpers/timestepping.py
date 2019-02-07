@@ -46,22 +46,22 @@ class CheckPoints:
     def __init__(self, points, t_start, t_end, dt_min=1e-6):
         self.points = np.array(points)
         self.post_process_t0 = False
-        if self.points.size != 0:
-            if self.points.max() > t_end or self.points.min() < t_start:
-                raise RuntimeError("Checkpoints outside of integration range.")
-            self.points = np.sort(np.unique(np.around(self.points, 6)))
-            if np.any(self.points < t_start + dt_min):
-                remaining = self.points >= t_start + dt_min
-                self.points = self.points[remaining]
-                self.post_process_t0 = True
 
-    def check(self, t, dt):
+        if self.points.size == 0:
+            return
+        if self.points.max() > t_end or self.points.min() < t_start:
+            raise RuntimeError("Checkpoints outside of integration range.")
+
+        self.points = np.sort(np.unique(np.around(self.points, 6)))
+        if np.any(self.points < t_start + dt_min):
+            remaining = self.points >= t_start + dt_min
+            self.points = self.points[remaining]
+            self.post_process_t0 = True
+
+    def timestep(self, t, dt):
         if self.points.size != 0 and self.points[0] < t + dt:
             dt = self.points[0] - t
-            t = self.points[0]
-        else:
-            t += dt
-        return (t, dt)
+        return dt
 
     def reached(self, t):
         if self.points.size !=0 and t == self.points[0]:
@@ -96,7 +96,8 @@ class AdaptiveTimeStepping:
             self._post_process(t)
 
         while t < t_end:
-            t, dt = checkpoints.check(t, dt)
+            dt = checkpoints.timestep(t, dt)
+            t += dt
 
             num_iter, converged = self._solve(t)
             if converged:
