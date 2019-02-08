@@ -35,9 +35,9 @@ class TestEquidistant(unittest.TestCase):
         for checkpoint in checkpoints:
             self.assertIn(checkpoint, visited_timesteps)
 
-        self.assertIn(0., visited_timesteps)
-        self.assertIn(5., visited_timesteps)
-        
+        self.assertIn(0.0, visited_timesteps)
+        self.assertIn(5.0, visited_timesteps)
+
         # check for duplicates
         self.assertEqual(len(visited_timesteps), np.unique(visited_timesteps).size)
 
@@ -61,6 +61,15 @@ class TestAdaptive(unittest.TestCase):
 
     def test_run(self):
         self.assertTrue(self.adaptive.run(1.5, 1.0))
+
+    def test_run_nicely(self):
+        visited_timesteps = []
+        pp = lambda t: visited_timesteps.append(t)
+        self.adaptive._post_process = pp
+        self.adaptive._solve = lambda t: (7, True)
+        self.assertTrue(self.adaptive.run(1.0))
+        self.assertAlmostEqual(visited_timesteps[0], 0)
+        self.assertAlmostEqual(visited_timesteps[-1], 1)
 
     def test_invalid_solve_first_str(self):
         self.adaptive._solve = lambda t: ("3", True)
@@ -90,7 +99,7 @@ class TestAdaptive(unittest.TestCase):
 
         self.assertTrue(np.isclose(visited_timesteps, 0, atol=eps).any())
         self.assertTrue(np.isclose(visited_timesteps, 1.5, atol=eps).any())
-        
+
         # check for duplicates
         self.assertEqual(len(visited_timesteps), np.unique(visited_timesteps).size)
 

@@ -109,7 +109,7 @@ class Adaptive:
         checkpoints = CheckPoints(checkpoints, t_start, t_end)
 
         dt0 = dt
-        while t < t_end:
+        while t < t_end and not math.isclose(t, t_end):
             dt = checkpoints.timestep(t, dt0)
             # We keep track of two time steps. dt0 is the time step that
             # ignores the checkpoints. This is the one that is adapted upon
@@ -159,7 +159,7 @@ class Equidistant:
     def run(self, t_end, dt, t_start=0.0, checkpoints=[], show_bar=False):
         progress = get_progress(t_start, t_end, show_bar)
 
-        if checkpoints: # check range
+        if checkpoints:  # only for range checking 
             CheckPoints(checkpoints, t_start, t_end)
         points_in_time = np.append(np.arange(t_start, t_end, dt), t_end)
         points_in_time = np.append(points_in_time, checkpoints)
@@ -175,3 +175,12 @@ class Equidistant:
                 progress.error(t, dt, num_iter)
                 return False
         return True
+
+
+class TimeStepping(Adaptive):
+    def adaptive(self, t_end, t_start=0.0, dt=None, checkpoints=[], show_bar=False):
+        return self.run(t_end, t_start, dt, checkpoints, show_bar)
+
+    def equidistant(self, t_end, dt, t_start=0.0, checkpoints=[], show_bar=False):
+        e = Equidistant(self._solve, self._post_process)
+        return e.run(t_end, dt, t_start, checkpoints, show_bar)
