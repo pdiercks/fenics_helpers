@@ -2,21 +2,18 @@ import numpy as np
 from dolfin import Function, info
 
 
-class Progress:
-    def __init__(self, t_start, t_end, show_bar):
-        self._show_bar = show_bar
+def term_color(color_name):
+    if color_name == "red":
+        return "\033[31m"
+    if color_name == "green":
+        return "\033[32m"
 
-        if self._show_bar:
-            from tqdm import tqdm
+def colored(msg, color_name):
+    return term_color(color_name) + msg + "\033[m"
 
-            fmt = "{l_bar}{bar}{rate_fmt}"
-            self._pbar = tqdm(total=t_end - t_start, ascii=True, bar_format=fmt)
-
-    def _green(self, msg):
-        info("\033[32m" + msg + "\033[m")
-
-    def _red(self, msg):
-        info("\033[31m" + msg + "\033[m")
+class ProgressInfo:
+    def __init__(self, t_start, t_end):
+        return
 
     def iteration_info(self, t, dt, iterations):
         return "at t = {:8.5f} after {:2} iteration(s) with dt = {:8.5f}.".format(
@@ -24,19 +21,32 @@ class Progress:
         )
 
     def success(self, t, dt, iterations):
-        if self._show_bar:
-            self._pbar.update(dt)
-            self._pbar.set_description("dt = {:8.5f}".format(dt))
-        else:
-            self._green("Convergence " + self.iteration_info(t, dt, iterations))
+        msg = "Convergence " + self.iteration_info(t, dt, iterations)
+        info(colored(msg, "green"))
 
     def error(self, t, dt, iterations):
-        if not self._show_bar:
-            self._red("No Convergence " + self.iteration_info(t, dt, iterations))
+        msg = "No convergence " + self.iteration_info(t, dt, iterations)
+        info(colored(msg, "red"))
+
+class ProgressBar:
+    def __init__(self, t_start, t_end):
+        from tqdm import tqdm
+
+        fmt = "{l_bar}{bar}{rate_fmt}"
+        self._pbar = tqdm(total=t_end - t_start, ascii=True, bar_format=fmt)
+
+    def success(self, t, dt, iterations):
+        self._pbar.update(dt)
+        self._pbar.set_description("dt = {:8.5f}".format(dt))
+
+    def error(self, t, dt, iterations):
+        return
 
     def __del__(self):
-        if self._show_bar:
-            self._pbar.close()
+        self._pbar.close()
+
+def get_progress(t_start, t_end, show_bar):
+    return ProgressBar(t_start, t_end) if show_bar else ProgressInfo(t_start, t_end)
 
 
 class CheckPoints:
@@ -88,7 +98,7 @@ class Adaptive:
         t = t_start
         self._post_process(t)
 
-        progress = Progress(t_start, t_end, show_bar)
+        progress = get_progress(t_start, t_end, show_bar) 
         checkpoints = CheckPoints(checkpoints, t_start, t_end)
         
 
@@ -100,8 +110,6 @@ class Adaptive:
             # fast/no convergence. dt is smaller than dt0
             assert(dt <= dt0)
             # and coveres checkpoints.
-
-            print(dt, dt0)
 
             t += dt
 
@@ -147,7 +155,7 @@ class Equidistant:
         self._post_process = post_process
 
     def run(self, t_end, dt, t_start=0.0, checkpoints=[], show_bar=False):
-        progress = Progress(t_start, t_end, show_bar)
+        progress = get_progress(t_start, t_end, show_bar) 
 
         points_in_time = np.append(np.arange(t_start, t_end, dt), t_end)
         checkpoints = CheckPoints(checkpoints, t_start, t_end)

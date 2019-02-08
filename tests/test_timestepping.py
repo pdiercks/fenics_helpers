@@ -42,7 +42,7 @@ class TestEquidistant(unittest.TestCase):
     
     def test_run_failed(self):
         self.equidistant._solve = lambda t: (3, False)
-        self.assertFalse(self.equidistant.run(5.0, 1.0))
+        self.assertFalse(self.equidistant.run(100.0, 1.0, show_bar=True))
     
     def test_invalid_solve(self):
         self.equidistant._solve = lambda t: (3, "False")
