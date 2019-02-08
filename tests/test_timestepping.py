@@ -18,7 +18,15 @@ class TestEquidistant(unittest.TestCase):
         )
 
     def test_run(self):
-        self.assertTrue(self.equidistant.run(100.0, 1.0))
+        self.assertTrue(self.equidistant.run(5.0, 1.0))
+    
+    def test_run_failed(self):
+        self.equidistant._solve = lambda t: (3, False)
+        self.assertFalse(self.equidistant.run(5.0, 1.0))
+    
+    def test_invalid_solve(self):
+        self.equidistant._solve = lambda t: (3, "False")
+        self.assertRaises(Exception, self.equidistant.run, 5.0, 1.0)
 
     @given(st.lists(st.floats(0.0, 5.0)))
     def test_checkpoints(self, checkpoints):
@@ -49,6 +57,21 @@ class TestAdaptive(unittest.TestCase):
 
     def test_run(self):
         self.assertTrue(self.adaptive.run(1.5, 1.0))
+    
+    def test_invalid_solve_first_str(self):
+        self.adaptive._solve = lambda t: ("3", True)
+        self.assertRaises(Exception, self.adaptive.run, 1.5, 1.0)
+
+    def test_invalid_solve_first_bool(self):
+        # You may switch arguments and put the bool first. We have to handle
+        # this case since booleans are some kind of subclass of int.
+        # So False > 5 will not produce errors.
+        self.adaptive._solve = lambda t: (False, True)
+        self.assertRaises(Exception, self.adaptive.run, 1.5, 1.0)
+
+    def test_invalid_solve_second(self):
+        self.adaptive._solve = lambda t: (3, "False")
+        self.assertRaises(Exception, self.adaptive.run, 1.5, 1.0)
 
     @given(st.lists(st.floats(0.0, 1.5)))
     def test_checkpoints(self, checkpoints):

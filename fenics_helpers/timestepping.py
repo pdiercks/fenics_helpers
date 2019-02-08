@@ -95,6 +95,9 @@ class Adaptive:
             t += dt
 
             num_iter, converged = self._solve(t)
+            assert(isinstance(converged, bool))
+            assert(type(num_iter) == int) # isinstance(False, int) is True...
+
             if converged:
                 progress.success(t, dt, num_iter)
                 u_prev.assign(self._u)
@@ -142,6 +145,8 @@ class Equidistant:
 
         for t in np.sort(points_in_time):
             num_iter, converged = self._solve(t)
+            assert(isinstance(converged, bool))
+
             if converged:
                 progress.success(t, dt, num_iter)
                 self._post_process(t)
