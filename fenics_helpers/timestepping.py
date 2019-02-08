@@ -63,8 +63,6 @@ class CheckPoints:
         points_within_dt = self.points[id_range]
         if points_within_dt.size != 0:
             return points_within_dt[0]
-        return None
-
 
     def timestep(self, t, dt):
         """
@@ -104,7 +102,7 @@ class Adaptive:
 
         dt0 = dt
         while t < t_end:
-            dt, dt0 = checkpoints.timestep(t, dt0), dt0
+            dt = checkpoints.timestep(t, dt0)
             # We keep track of two time steps. dt0 is the time step that
             # ignores the checkpoints. This is the one that is adapted upon
             # fast/no convergence. dt is smaller than dt0
