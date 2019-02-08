@@ -55,19 +55,19 @@ class TestAdaptive(unittest.TestCase):
         visited_timesteps = []
         pp = lambda t: visited_timesteps.append(t)
         self.adaptive._post_process = pp
-        self.assertTrue(self.adaptive.run(1.5, dt0=1.0, checkpoints=checkpoints))
+        self.assertTrue(self.adaptive.run(1.5, dt=1.0, checkpoints=checkpoints))
         for checkpoint in checkpoints:
             self.assertTrue(np.isclose(visited_timesteps, checkpoint, atol=self.adaptive.dt_min).any())
 
     @given(st.lists(st.floats(max_value=0.0, exclude_max=True), min_size=1))
     def test_adaptive_too_low_checkpoints(self, checkpoints):
         with self.assertRaises(RuntimeError) as cm:
-            self.adaptive.run(1.5, dt0=1.0, checkpoints=checkpoints)
+            self.adaptive.run(1.5, dt=1.0, checkpoints=checkpoints)
 
     @given(st.lists(st.floats(min_value=1.5, exclude_min=True), min_size=1))
     def test_adaptive_too_high_checkpoints(self, checkpoints):
         with self.assertRaises(RuntimeError) as cm:
-            self.adaptive.run(1.5, dt0=1.0, checkpoints=checkpoints)
+            self.adaptive.run(1.5, dt=1.0, checkpoints=checkpoints)
 
 
 if __name__ == "__main__":

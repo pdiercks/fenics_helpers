@@ -77,11 +77,9 @@ class AdaptiveTimeStepping:
         self._post_process = post_process
         self._u = u
 
-    def run(self, t_end, t_start=0.0, dt0=None, checkpoints=[], show_bar=False):
-        if dt0 is None:
-            dt0 = self.dt_max
-
-        dt = dt0
+    def run(self, t_end, t_start=0.0, dt=None, checkpoints=[], show_bar=False):
+        if dt is None:
+            dt = self.dt_max
 
         u_prev = self._u.copy(deepcopy=True)
         t = t_start
