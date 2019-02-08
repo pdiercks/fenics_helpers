@@ -65,7 +65,7 @@ class CheckPoints:
             self.points = np.delete(self.points, 0)
 
 
-class AdaptiveTimeStepping:
+class Adaptive:
     def __init__(self, solve, post_process, u):
         assert isinstance(u, Function)
         self.dt_min = 1.0e-6
@@ -128,7 +128,7 @@ class AdaptiveTimeStepping:
         return True
 
 
-class EquidistantTimeStepping:
+class Equidistant:
     def __init__(self, solve, post_process):
         self._solve = solve
         self._post_process = post_process
