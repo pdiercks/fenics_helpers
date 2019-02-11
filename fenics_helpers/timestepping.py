@@ -3,15 +3,11 @@ from dolfin import Function, info
 import math
 
 
-def term_color(color_name):
-    if color_name == "red":
-        return "\033[31m"
-    if color_name == "green":
-        return "\033[32m"
+TERM_COLOR = {"red": "\033[31", "green": "\033[32"}
 
 
 def colored(msg, color_name):
-    return term_color(color_name) + msg + "\033[m"
+    return TERM_COLOR[color_name] + msg + "\033[m"
 
 
 class ProgressInfo:
@@ -158,7 +154,8 @@ class Equidistant:
     def run(self, t_end, dt, t_start=0.0, checkpoints=[], show_bar=False):
         progress = get_progress(t_start, t_end, show_bar)
 
-        if checkpoints:  # only for range checking 
+        checkpoints = np.array(checkpoints)
+        if checkpoints.size != 0:  # only for range checking
             CheckPoints(checkpoints, t_start, t_end)
         points_in_time = np.append(np.arange(t_start, t_end, dt), t_end)
         points_in_time = np.append(points_in_time, checkpoints)
