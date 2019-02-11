@@ -141,10 +141,9 @@ class Adaptive:
                 self._u.assign(u_prev)
                 t -= dt
 
-                if dt == dt0:
-                    dt0 *= self.decrease_factor
-                    if not show_bar:
-                        info("Reduce time step to dt = {}.".format(dt0))
+                dt0 *= self.decrease_factor
+                if not show_bar:
+                    info("Reduce time step to dt = {}.".format(dt0))
                 if dt0 < self.dt_min:
                     info("Abort since dt({}) < dt_min({})".format(dt0, self.dt_min))
                     return False
