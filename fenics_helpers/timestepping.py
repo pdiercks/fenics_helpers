@@ -78,9 +78,8 @@ class CheckPoints:
         return dt
 
 
-class Adaptive:
-    def __init__(self, solve, post_process, u):
-        assert isinstance(u, Function)
+class TimeStepper:
+    def __init__(self, solve, post_process, u=None):
         self.dt_min = 1.0e-6
         self.dt_max = 0.1
         self.decrease_factor = 0.5
@@ -90,7 +89,8 @@ class Adaptive:
         self._post_process = post_process
         self._u = u
 
-    def run(self, t_end, t_start=0.0, dt=None, checkpoints=[], show_bar=False):
+    def adaptive(self, t_end, t_start=0.0, dt=None, checkpoints=[], show_bar=False):
+        assert isinstance(self._u, Function)
         if dt is None:
             dt = self.dt_max
 
@@ -145,13 +145,7 @@ class Adaptive:
                     return False
         return True
 
-
-class Equidistant:
-    def __init__(self, solve, post_process):
-        self._solve = solve
-        self._post_process = post_process
-
-    def run(self, t_end, dt, t_start=0.0, checkpoints=[], show_bar=False):
+    def equidistant(self, t_end, dt, t_start=0.0, checkpoints=[], show_bar=False):
         progress = get_progress(t_start, t_end, show_bar)
 
         checkpoints = np.array(checkpoints)
@@ -171,12 +165,3 @@ class Equidistant:
                 progress.error(t, dt, num_iter)
                 return False
         return True
-
-
-class TimeStepping(Adaptive):
-    def adaptive(self, t_end, t_start=0.0, dt=None, checkpoints=[], show_bar=False):
-        return self.run(t_end, t_start, dt, checkpoints, show_bar)
-
-    def equidistant(self, t_end, dt, t_start=0.0, checkpoints=[], show_bar=False):
-        e = Equidistant(self._solve, self._post_process)
-        return e.run(t_end, dt, t_start, checkpoints, show_bar)
