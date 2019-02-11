@@ -111,6 +111,11 @@ class TestAdaptive(unittest.TestCase):
         self.assertAlmostEqual(visited_timesteps[0], 0)
         self.assertAlmostEqual(visited_timesteps[-1], 1)
 
+    def test_dt_chaining(self):
+        special_stepper = self.stepper.dt_max(0.5).dt_min(0.1)
+        self.assertAlmostEqual(special_stepper._dt_max, 0.5)
+        self.assertAlmostEqual(special_stepper._dt_min, 0.1)
+
     def test_checkpoint_step_fails(self):
         cps = [0.5]
         self.assertEqual(self.stepper._solve.t, 0)

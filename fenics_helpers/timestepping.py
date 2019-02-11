@@ -80,19 +80,27 @@ class CheckPoints:
 
 class TimeStepper:
     def __init__(self, solve, post_process, u=None):
-        self.dt_min = 1.0e-6
-        self.dt_max = 0.1
         self.decrease_factor = 0.5
         self.increase_factor = 1.5
         self.increase_num_iter = 4
+        self._dt_min = 1.0e-6
+        self._dt_max = 0.1
         self._solve = solve
         self._post_process = post_process
         self._u = u
 
+    def dt_max(self, dt):
+        self._dt_max = dt
+        return self
+    
+    def dt_min(self, dt):
+        self._dt_min = dt
+        return self
+
     def adaptive(self, t_end, t_start=0.0, dt=None, checkpoints=[], show_bar=False):
         assert isinstance(self._u, Function)
         if dt is None:
-            dt = self.dt_max
+            dt = self._dt_max
 
         u_prev = self._u.copy(deepcopy=True)
         t = t_start
@@ -125,9 +133,9 @@ class TimeStepper:
                 self._post_process(t)
 
                 # increase the time step for fast convergence
-                if dt == dt0 and num_iter < self.increase_num_iter and dt < self.dt_max:
+                if dt == dt0 and num_iter < self.increase_num_iter and dt < self._dt_max:
                     dt0 *= self.increase_factor
-                    dt0 = min(dt0, self.dt_max)
+                    dt0 = min(dt0, self._dt_max)
                     if not show_bar:
                         info("Increasing time step to dt = {}.".format(dt0))
 
@@ -140,8 +148,8 @@ class TimeStepper:
                 dt0 *= self.decrease_factor
                 if not show_bar:
                     info("Reduce time step to dt = {}.".format(dt0))
-                if dt0 < self.dt_min:
-                    info("Abort since dt({}) < dt_min({})".format(dt0, self.dt_min))
+                if dt0 < self._dt_min:
+                    info("Abort since dt({}) < _dt_min({})".format(dt0, self._dt_min))
                     return False
         return True
 
