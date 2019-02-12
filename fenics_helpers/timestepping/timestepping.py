@@ -2,6 +2,7 @@ import numpy as np
 from dolfin import Function, info
 import math
 
+__all__ = ["TimeStepper"]
 
 TERM_COLOR = {"red": "\033[31", "green": "\033[32"}
 
