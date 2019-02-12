@@ -1,8 +1,9 @@
 import matplotlib.pyplot as plt
 
+
 class AdaptivePlot:
     def __init__(self, fmt="-bx", ax=None):
-        plt.ion() # interactive on
+        plt.ion()  # interactive on
         if ax is None:
             ax = plt.gca()
 
@@ -25,10 +26,9 @@ class AdaptivePlot:
         """
         Deactivates the interactive mode to show the plot.        
         """
-        plt.ioff() # interactive off
+        plt.ioff()  # interactive off
         plt.show()
 
     @property
     def ax(self):
         return self._line.axes
-
