@@ -1,4 +1,5 @@
 import matplotlib.pyplot as plt
+import numpy as np
 
 
 class AdaptivePlot:
@@ -7,17 +8,14 @@ class AdaptivePlot:
         if ax is None:
             ax = plt.gca()
 
-        self._line, = ax.plot([0.0], [0.0], fmt)
-        self._xs = []
-        self._ys = []
+        self._line, = ax.plot([], [], fmt)
 
     def __call__(self, x, y):
         """
         Add the point (x,y) to the plot and rescales the axes.
         """
-        self._xs.append(x)
-        self._ys.append(y)
-        self._line.set_data(self._xs, self._ys)
+        xs, ys = self._line.get_data()
+        self._line.set_data(np.append(xs, x), np.append(ys, y))
         self.ax.relim()
         self.ax.autoscale_view(True, True, True)
         self.ax.figure.canvas.flush_events()
