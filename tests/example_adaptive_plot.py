@@ -6,7 +6,7 @@ from fenics_helpers.plotting import AdaptivePlot
 
 
 def single_plot():
-    p = AdaptivePlot("-gx")
+    p = AdaptivePlot("-gx", show_head=False)
     p.ax.set_xlabel("iteration")
     p.ax.set_ylabel("time [ms]")
     dt = 0.0
