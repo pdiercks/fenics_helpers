@@ -4,7 +4,7 @@ import math
 
 __all__ = ["TimeStepper"]
 
-TERM_COLOR = {"red": "\033[31", "green": "\033[32"}
+TERM_COLOR = {"red": "\033[31m", "green": "\033[32m"}
 
 
 def colored(msg, color_name):
