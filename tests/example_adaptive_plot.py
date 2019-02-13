@@ -2,7 +2,7 @@ import time
 import math
 
 from context import fenics_helpers
-from fenics_helpers.plotting.adaptive_plot import AdaptivePlot
+from fenics_helpers.plotting import AdaptivePlot
 
 
 def single_plot():
