@@ -70,13 +70,6 @@ class TestRungeKuttaWithHeatEq(unittest.TestCase):
         for step in range(self.num_steps):
             timeStepper.do_step(bc=self.bc)
 
-    # TODO not sure why this is failing
-    @unittest.expectedFailure
-    def test_IRK(self):
-        timeStepper = rk.IRKo1(rk.HammerHollingsworth4, *self.parameters)
-        for step in range(self.num_steps):
-            timeStepper.do_step(bc=self.bc)
-
 
 class TestRungeKuttaWithWaveEq(unittest.TestCase):
     def setUp(self):

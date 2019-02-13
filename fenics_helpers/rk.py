@@ -134,64 +134,6 @@ class RKo1:
         self.t += self.h.values()[0]
 
 
-class IRKo1(RKo1):
-    """
-    A fully implicit Runge Kutta method for differential equations
-    of 1st order, e.g. the heat equation.
-    """
-
-    @staticmethod
-    def create_intermediate_forms(bt, L1, L2, u, h):
-        num_stages = len(bt.c)
-        # create mixed function space that combines all stages
-        L = L1 - L2
-        test_func = L.arguments()[0]
-        trial_func = L.arguments()[1]
-        V = test_func.function_space()
-        elm = V.ufl_element()
-        elmW = d.MixedElement([elm for i in range(num_stages)])
-        W = d.FunctionSpace(V.mesh(), elmW)
-        test_func_w = d.TestFunctions(W)
-
-        ll = d.Function(W)
-        LL = 0
-
-        for stage in range(num_stages):
-            xs = u
-            for j in range(num_stages):
-                xs += h * bt.A[stage, j] * ll[j]
-            Ls = ufl.replace(
-                L, {u: xs, test_func: test_func_w[stage], trial_func: ll[stage]}
-            )
-            LL += Ls
-        return [LL, ll]
-
-    def __init__(self, bt, L1, L2, u, h, update=lambda t: None):
-        """
-        Args:
-            bt: Butcher tableau
-            L: Right hand side of the equation
-               expected to be a 1-form
-            u: Function representing the values
-            h: stepSize (needed for adaptivity)
-            update: a function f(t) that updates relevant expressions
-        Note:
-            `update` is not supported at the moment
-        """
-        super(IRKo1, self).__init__(bt, L1, L2, u, h, update=update)
-        self.LL, self.ll_full = self.create_intermediate_forms(bt, L1, L2, u, self.h)
-
-    def solve_stages(self, bc):
-        """
-        Solves intermediate steps.
-
-        Uses a full mass matrix constructed in init.
-        """
-        # TODO don't use full mass matrix
-        d.solve(self.LL == 0, self.ll_full, bcs=bc)
-        self.ll = self.ll_full.split(deepcopy=True)
-
-
 class DIRKo1(RKo1):
     """
     An diagonally implicit Runge Kutta method for differential equations
