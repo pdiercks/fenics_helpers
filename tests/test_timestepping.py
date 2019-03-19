@@ -27,8 +27,7 @@ class DeterministicSolve:
     def get(self, dt):
         return self.memory.get((self.t, dt))
 
-    def __call__(self, t):
-        dt = t - self.t
+    def __call__(self, t, dt):
         value = self.get(dt)
 
         if self.same_value_counter > 100:
@@ -50,7 +49,7 @@ class DeterministicSolve:
 
 class TestEquidistant(unittest.TestCase):
     def setUp(self):
-        solve = lambda t: (3, True)
+        solve = lambda t, dt: (3, True)
         pp = lambda t: None
         self.stepper = fenics_helpers.timestepping.TimeStepper(solve, pp)
 
@@ -58,11 +57,11 @@ class TestEquidistant(unittest.TestCase):
         self.assertTrue(self.stepper.equidistant(5.0, 1.0))
 
     def test_run_failed(self):
-        self.stepper._solve = lambda t: (3, False)
+        self.stepper._solve = lambda t, dt: (3, False)
         self.assertFalse(self.stepper.equidistant(100.0, 1.0, show_bar=True))
 
     def test_invalid_solve(self):
-        self.stepper._solve = lambda t: (3, "False")
+        self.stepper._solve = lambda t, dt: (3, "False")
         self.assertRaises(Exception, self.stepper.equidistant, 5.0, 1.0)
 
     @given(st.lists(st.floats(0.0, 5.0)))
@@ -106,7 +105,7 @@ class TestAdaptive(unittest.TestCase):
         visited_timesteps = []
         pp = lambda t: visited_timesteps.append(t)
         self.stepper._post_process = pp
-        self.stepper._solve = lambda t: (7, True)
+        self.stepper._solve = lambda t, dt: (7, True)
         self.assertTrue(self.stepper.adaptive(1.0))
         self.assertAlmostEqual(visited_timesteps[0], 0)
         self.assertAlmostEqual(visited_timesteps[-1], 1)
@@ -127,18 +126,18 @@ class TestAdaptive(unittest.TestCase):
 
 
     def test_invalid_solve_first_str(self):
-        self.stepper._solve = lambda t: ("3", True)
+        self.stepper._solve = lambda t, dt: ("3", True)
         self.assertRaises(Exception, self.stepper.adaptive, 1.5, 1.0)
 
     def test_invalid_solve_first_bool(self):
         # You may switch arguments and put the bool first. We have to handle
         # this case since booleans are some kind of subclass of int.
         # So False > 5 will not produce errors.
-        self.stepper._solve = lambda t: (False, True)
+        self.stepper._solve = lambda t, dt: (False, True)
         self.assertRaises(Exception, self.stepper.adaptive, 1.5, 1.0)
 
     def test_invalid_solve_second(self):
-        self.stepper._solve = lambda t: (3, "False")
+        self.stepper._solve = lambda t, dt: (3, "False")
         self.assertRaises(Exception, self.stepper.adaptive, 1.5, 1.0)
 
     @given(st.lists(st.floats(0.0, 1.5)))
