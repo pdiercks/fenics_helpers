@@ -17,19 +17,11 @@ class DeterministicSolve:
     """
     def __init__(self):
         self.memory = {}
-        self.t = 0.
         self.same_value_counter = 0
         random.seed(6174)
 
-    def set(self, dt, value):
-        self.memory[(self.t, dt)] = value
-    
-    def get(self, dt):
-        return self.memory.get((self.t, dt))
-
-    def __call__(self, t):
-        dt = t - self.t
-        value = self.get(dt)
+    def __call__(self, t, dt):
+        value = self.memory.get((t, dt))
 
         if self.same_value_counter > 100:
             raise RuntimeError("Same value requested more than 100 times.")
@@ -39,18 +31,17 @@ class DeterministicSolve:
             return 3, value
 
         self.same_value_counter = 0
-
         value = random.choice([True, True, True, True, False])
-        self.set(dt, value)
-        if value == True:
-            self.t += dt
+        if dt < 1.e-5:
+            value = True
+        self.memory[(t, dt)] = value
 
         return 3, value
 
 
 class TestEquidistant(unittest.TestCase):
     def setUp(self):
-        solve = lambda t: (3, True)
+        solve = lambda t, dt: (3, True)
         pp = lambda t: None
         self.stepper = fenics_helpers.timestepping.TimeStepper(solve, pp)
 
@@ -58,11 +49,11 @@ class TestEquidistant(unittest.TestCase):
         self.assertTrue(self.stepper.equidistant(5.0, 1.0))
 
     def test_run_failed(self):
-        self.stepper._solve = lambda t: (3, False)
+        self.stepper._solve = lambda t, dt: (3, False)
         self.assertFalse(self.stepper.equidistant(100.0, 1.0, show_bar=True))
 
     def test_invalid_solve(self):
-        self.stepper._solve = lambda t: (3, "False")
+        self.stepper._solve = lambda t, dt: (3, "False")
         self.assertRaises(Exception, self.stepper.equidistant, 5.0, 1.0)
 
     @given(st.lists(st.floats(0.0, 5.0)))
@@ -80,7 +71,7 @@ class TestEquidistant(unittest.TestCase):
         # check for duplicates
         self.assertEqual(len(visited_timesteps), np.unique(visited_timesteps).size)
 
-    @given(st.lists(st.floats(max_value=0.0, exclude_max=True), min_size=1))
+    @given(st.lists(st.floats(max_value=-0.0, exclude_max=True), min_size=1))
     def test_too_low_checkpoints(self, checkpoints):
         with self.assertRaises(RuntimeError) as cm:
             self.stepper.equidistant(5.0, 1.0, checkpoints=checkpoints)
@@ -106,7 +97,7 @@ class TestAdaptive(unittest.TestCase):
         visited_timesteps = []
         pp = lambda t: visited_timesteps.append(t)
         self.stepper._post_process = pp
-        self.stepper._solve = lambda t: (7, True)
+        self.stepper._solve = lambda t, dt: (7, True)
         self.assertTrue(self.stepper.adaptive(1.0))
         self.assertAlmostEqual(visited_timesteps[0], 0)
         self.assertAlmostEqual(visited_timesteps[-1], 1)
@@ -118,27 +109,26 @@ class TestAdaptive(unittest.TestCase):
 
     def test_checkpoint_step_fails(self):
         cps = [0.5]
-        self.assertEqual(self.stepper._solve.t, 0)
         self.stepper.dt_max = 1.
-        # first time step 0.6 is bigger than the first checkpoint. 
-        # So dt --> 0.5, dt0--> 0.6
-        self.stepper._solve.set(cps[0], False)
+        # first time step 1.0 is bigger than the first checkpoint. 
+        # So dt --> 0.5, dt0--> 0.1
+        self.stepper._solve.memory[(0, cps[0])] = False
         self.stepper.adaptive(1.0, checkpoints=cps)
 
 
     def test_invalid_solve_first_str(self):
-        self.stepper._solve = lambda t: ("3", True)
+        self.stepper._solve = lambda t, dt: ("3", True)
         self.assertRaises(Exception, self.stepper.adaptive, 1.5, 1.0)
 
     def test_invalid_solve_first_bool(self):
         # You may switch arguments and put the bool first. We have to handle
         # this case since booleans are some kind of subclass of int.
         # So False > 5 will not produce errors.
-        self.stepper._solve = lambda t: (False, True)
+        self.stepper._solve = lambda t, dt: (False, True)
         self.assertRaises(Exception, self.stepper.adaptive, 1.5, 1.0)
 
     def test_invalid_solve_second(self):
-        self.stepper._solve = lambda t: (3, "False")
+        self.stepper._solve = lambda t, dt: (3, "False")
         self.assertRaises(Exception, self.stepper.adaptive, 1.5, 1.0)
 
     @given(st.lists(st.floats(0.0, 1.5)))
@@ -158,7 +148,7 @@ class TestAdaptive(unittest.TestCase):
         # check for duplicates
         self.assertEqual(len(visited_timesteps), np.unique(visited_timesteps).size)
 
-    @given(st.lists(st.floats(max_value=0.0, exclude_max=True), min_size=1))
+    @given(st.lists(st.floats(max_value=-0.0, exclude_max=True), min_size=1))
     def test_too_low_checkpoints(self, checkpoints):
         with self.assertRaises(RuntimeError) as cm:
             self.stepper.adaptive(1.5, dt=1.0, checkpoints=checkpoints)

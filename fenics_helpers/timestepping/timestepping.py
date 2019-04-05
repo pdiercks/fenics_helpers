@@ -124,7 +124,7 @@ class TimeStepper:
 
             t += dt
 
-            num_iter, converged = self._solve(t)
+            num_iter, converged = self._solve(t, dt)
             assert isinstance(converged, bool)
             assert type(num_iter) == int  # isinstance(False, int) is True...
 
@@ -164,7 +164,7 @@ class TimeStepper:
         points_in_time = np.append(points_in_time, checkpoints)
 
         for t in np.sort(np.unique(points_in_time)):
-            num_iter, converged = self._solve(t)
+            num_iter, converged = self._solve(t, dt)
             assert isinstance(converged, bool)
 
             if converged:
