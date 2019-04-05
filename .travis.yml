@@ -9,4 +9,4 @@ before_script:
 
 script:
     - docker exec dock bash -c "pip3 install --user hypothesis tqdm"
-    - docker exec dock bash -c "cd shared/tests && python3 -m unittest discover"
+    - docker exec dock bash -c "cd shared/tests && python3 -m unittest discover -v"
