@@ -10,4 +10,4 @@ jobs:
           name: run tests
           command: |
               pip3 install --user hypothesis tqdm
-              cd tests && python3 -m unittest discover
+              cd tests && python3 -m unittest discover -v
