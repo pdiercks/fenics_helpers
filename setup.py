@@ -3,6 +3,8 @@ import setuptools
 with open("README.md", "r") as fh:
     long_description = fh.read()
 
+print("YAAAY§", setuptools.find_packages())
+
 setuptools.setup(
     name="fenics_helpers",
     version="0.1",

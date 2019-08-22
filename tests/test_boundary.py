@@ -1,5 +1,4 @@
 import unittest
-from context import fenics_helpers
 from fenics_helpers import boundary
 
 class TestBoundary(unittest.TestCase):

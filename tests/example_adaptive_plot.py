@@ -1,7 +1,6 @@
 import time
 import math
 
-from context import fenics_helpers
 from fenics_helpers.plotting import AdaptivePlot
 
 

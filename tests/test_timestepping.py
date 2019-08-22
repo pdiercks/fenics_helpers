@@ -5,8 +5,7 @@ import numpy as np
 from hypothesis import given, reproduce_failure
 import hypothesis.strategies as st
 
-
-from context import fenics_helpers
+import fenics_helpers.timestepping
 
 class DeterministicSolve:
     """
