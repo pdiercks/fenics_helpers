@@ -10,4 +10,4 @@ before_script:
 script:
     - docker exec dock bash -c "pip3 install --no-cache-dir hypothesis tqdm"
     - docker exec dock bash -c "cd shared && pip3 install --no-cache-dir ."
-    - docker exec dock bash -c "python3 -m unittest discover -v"
+    - docker exec dock bash -c "python3 -m unittest discover -v -s shared/tests"
