@@ -3,6 +3,8 @@ import setuptools
 with open("README.md", "r") as fh:
     long_description = fh.read()
 
+print("YAAAY§", setuptools.find_packages())
+
 setuptools.setup(
     name="fenics_helpers",
     version="0.1",
@@ -12,7 +14,7 @@ setuptools.setup(
     long_description=long_description,
     long_description_content_type="text/markdown",
     url="https://github.com/nutofem/fenics_helpers",
-    packages=["fenics_helpers", "fenics_helpers.timestepping", "fenics_helpers.plotting"],
+    packages=setuptools.find_packages(),
     classifiers=[
         "Programming Language :: Python :: 3",
         "License :: OSI Approved :: MIT License",

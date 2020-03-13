@@ -1,4 +1,3 @@
-from context import fenics_helpers
 import unittest
 import dolfin as d
 from fenics_helpers import rk

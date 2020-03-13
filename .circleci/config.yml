@@ -9,5 +9,6 @@ jobs:
       - run:
           name: run tests
           command: |
-              pip3 install --user hypothesis tqdm
-              cd tests && python3 -m unittest discover -v
+              pip3 install --no-cache-dir hypothesis tqdm
+              pip3 install --no-cache-dir .
+              python3 -m unittest discover -v -s tests

@@ -8,5 +8,6 @@ before_script:
     - docker run -itd --name dock -v $(pwd):/home/fenics/shared fenicsproject/stable
 
 script:
-    - docker exec dock bash -c "pip3 install --user hypothesis tqdm"
-    - docker exec dock bash -c "cd shared/tests && python3 -m unittest discover -v"
+    - docker exec dock bash -c "pip3 install --no-cache-dir hypothesis tqdm"
+    - docker exec dock bash -c "cd shared && pip3 install --no-cache-dir ."
+    - docker exec dock bash -c "python3 -m unittest discover -v -s shared/tests"
