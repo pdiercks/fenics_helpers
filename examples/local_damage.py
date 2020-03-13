@@ -92,129 +92,123 @@ class ModifiedMises:
 
 
 
-class LoadDisplacementCurve:
-    def __init__(self, model, boundary, marker=6174):
-        mesh = model.mesh
-        self.model = model
-        boundary_markers = df.MeshFunction("size_t", mesh, mesh.topology().dim() - 1)
+# class LoadDisplacementCurve:
+#     def __init__(self, model, boundary, marker=6174):
+#         mesh = model.mesh
+#         self.model = model
+#         boundary_markers = df.MeshFunction("size_t", mesh, mesh.topology().dim() - 1)
+#
+#         boundary.mark(boundary_markers, marker)
+#         ds = df.Measure("ds", domain=mesh, subdomain_data=boundary_markers)
+#
+#         n = df.FacetNormal(mesh)
+#         self.boundary_load = df.dot(model.traction(n), n) * ds(marker)
+#         self.boundary_disp = df.dot(model.d, n) * ds(marker)
+#         self.area = df.assemble(1.0 * ds(marker))
+#
+#         self.load = []
+#         self.disp = []
+#         self.ts = []
+#
+#         self.plot = None
+#
+#     def __call__(self, t):
+#         load = df.assemble(self.boundary_load)
+#         disp = df.assemble(self.boundary_disp) / self.area
+#         self.load.append(load)
+#         self.disp.append(disp)
+#         self.ts.append(t)
+#         if self.plot:
+#             self.plot(disp, load)
+#
+#     def integrate(self):
+#         return trapz(self.load, self.disp)
+#
+#     def show(self, fmt="-rx"):
+#         from fenics_helpers.plotting import AdaptivePlot
+#
+#         self.plot = AdaptivePlot(fmt)
+#
+#     def keep_plot(self):
+#         self.plot.keep()
 
-        boundary.mark(boundary_markers, marker)
-        ds = df.Measure("ds", domain=mesh, subdomain_data=boundary_markers)
 
-        n = df.FacetNormal(mesh)
-        self.boundary_load = df.dot(model.traction(n), n) * ds(marker)
-        self.boundary_disp = df.dot(model.d, n) * ds(marker)
-        self.area = df.assemble(1.0 * ds(marker))
+mesh = l_panel_mesh(10, 10, refinement=5)
+order = 1
 
-        self.load = []
-        self.disp = []
-        self.ts = []
+# displacement field u
+W = df.VectorFunctionSpace(mesh, "P", order)
+u = df.Function(W)
 
-        self.plot = None
+# history data field k
+W_k = df.FunctionSpace(mesh, "P", order)
+k = df.Function(W_k)
 
-    def __call__(self, t):
-        load = df.assemble(self.boundary_load)
-        disp = df.assemble(self.boundary_disp) / self.area
-        self.load.append(load)
-        self.disp.append(disp)
-        self.ts.append(t)
-        if self.plot:
-            self.plot(disp, load)
+# strain norm definition
+eeq = ModifiedMises(1., Mat.nu)
 
-    def integrate(self):
-        return trapz(self.load, self.disp)
+# constitutive law stress = (1. - omega) * C(E, nu) * strain
+strain = df.sym(df.grad(u))
+lmbda = Mat.E * Mat.nu / (1. + Mat.nu) / (1. - 2. * Mat.nu)
+mu = Mat.E / 2. / (1. + Mat.nu)
+stress = 2 * mu * strain + lmbda * df.tr(strain) * df.Identity(2)
 
-    def show(self, fmt="-rx"):
-        from fenics_helpers.plotting import AdaptivePlot
+def update_history():
+    k.assign(df.project(max(k, eeq(strain))))
 
-        self.plot = AdaptivePlot(fmt)
-
-    def keep_plot(self):
-        self.plot.keep()
-
-
-class Problem:
-    def __init__(self, mat, mesh, order=1):
-        self.mat = mat
-        self.mesh = mesh
-
-        self.W_k = df.FunctionSpace(mesh, "P", order)
-        self.k = df.Function(self.W_k)
-
-        self.W = df.VectorFunctionSpace(mesh, "P", order)
-        self.W_d = self.W
-        self.u = df.Function(self.W)
-        self.d = self.u
-
-        self.eeq = ModifiedMises(1, mat.nu)
-
-    def eps(self):
-        return df.sym(df.grad(self.d))
-    
-    def sigma(self):
-        eps = self.eps()
-        E = self.mat.E
-        nu = self.mat.nu
-        lmbda = E * nu / (1. + nu) / (1. - 2. * nu)
-        mu = E / 2. / (1. + nu)
-
-        return 2 * mu * eps + lmbda * df.tr(eps) * df.Identity(self.mesh.geometric_dimension())
-
-    def traction(self, n):
-        return df.dot((1.-omega(self.k))*self.sigma(), n)
-
-    def update(self):
-        self.k.assign(df.project(max(self.k, self.eeq(self.eps()))))
-
-    def get_solver(self, bcs):
-        v = df.TestFunction(self.W)
-        dd = df.TrialFunction(self.W)
-
-        # elastic potential
-        Psi0 = 0.5 * df.inner(self.sigma(), self.eps()) 
-        # damaged elastic potential
-        area = df.Expression("0.4 < x[0] && x[0] < 0.6 ? 0.9 : 1.", degree=3)
-        Psi = (1. - omega(self.k)) * Psi0 *area*df.dx 
-
-        F = df.derivative(Psi, self.u, v)
-        J = df.derivative(F, self.u, dd)
-
-        problem = df.NonlinearVariationalProblem(F, self.u, bcs, J=J)
-        solver = df.NonlinearVariationalSolver(problem)
-        solver.parameters["nonlinear_solver"] = "snes"
-        solver.parameters["snes_solver"]["error_on_nonconvergence"] = False
-        solver.parameters["snes_solver"]["line_search"] = "bt"
-        solver.parameters["snes_solver"]["linear_solver"] = "mumps"
-        solver.parameters["snes_solver"]["maximum_iterations"] = 10
-
-        return solver
-
-df.parameters["form_compiler"]["quadrature_degree"] = 3
-
-problem = Problem(Mat(), l_panel_mesh(10, 10))
-
+# define boundary conditions using fh.boundary helpers
 bot = fh.boundary.plane_at(0, "y") 
 right = fh.boundary.plane_at(0, "x") 
 
 bc_top_expr=df.Expression("du * t", du=0.0002, t=0, degree=0)
 
-bc_bot = df.DirichletBC(problem.W_d, [0, 0], bot)
-bc_top = df.DirichletBC(problem.W_d.sub(1), bc_top_expr, right)
+bc_bot = df.DirichletBC(W, [0, 0], bot)
+bc_top = df.DirichletBC(W.sub(1), bc_top_expr, right)
+bcs = [bc_bot, bc_top]
 
-ld = LoadDisplacementCurve(problem, right)
-ld.show()
 
-solver = problem.get_solver([bc_bot, bc_top])
+# define the potential and its derivatives
+df.parameters["form_compiler"]["quadrature_degree"] = 3
+v = df.TestFunction(W)
+dd = df.TrialFunction(W)
+
+Psi0 = 0.5 * df.inner(stress, strain) # elastic potential
+Psi = (1. - omega(k)) * Psi0 *df.dx # damaged elastic potential
+
+F = df.derivative(Psi, u, v)
+J = df.derivative(F, u, dd)
+
+problem = df.NonlinearVariationalProblem(F, u, bcs, J=J)
+
+# configure the solver.
+# The error_on_nonconvergence is crucial for the fh.timestepping.TimeStepper !
+solver = df.NonlinearVariationalSolver(problem)
+solver.parameters["nonlinear_solver"] = "snes"
+solver.parameters["snes_solver"]["error_on_nonconvergence"] = False
+solver.parameters["snes_solver"]["line_search"] = "bt"
+solver.parameters["snes_solver"]["linear_solver"] = "mumps"
+solver.parameters["snes_solver"]["maximum_iterations"] = 10
+
+# ld = LoadDisplacementCurve(problem, right)
+# ld.show()
+
+# solver = problem.get_solver([bc_bot, bc_top])
 
 def solve(t, dt):
+    """
+    `t` and `dt` are provided by the fh.TimeStepper
+    """
     bc_top_expr.t=t
     return solver.solve()
 
 def pp(t):
-    problem.update()
+    """
+    This is called after every successful solve
+    """
+    update_history()
     # plt.plot(problem.u.vector()[:])
-    ld(t)
+    # ld(t)
 
-fh.timestepping.TimeStepper(solve, pp, u=problem.u).adaptive(2)
-ld.keep_plot()
+fh.timestepping.TimeStepper(solve, pp, u=u).adaptive(2)
+# ld.keep_plot()
 
