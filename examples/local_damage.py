@@ -89,11 +89,8 @@ class ModifiedMises:
         return self.T1 * I1 + df.sqrt(A_pos) / (2. * self.k)
 
 
-
-
-
 class LoadDisplacementCurve:
-    def __init__(self, model, boundary, marker=6174):
+    def __init__(self, model, boundary, marker=6174, direction=None):
         mesh = model.mesh
         self.model = model
         boundary_markers = df.MeshFunction("size_t", mesh, mesh.topology().dim() - 1)
@@ -102,13 +99,14 @@ class LoadDisplacementCurve:
         ds = df.Measure("ds", domain=mesh, subdomain_data=boundary_markers)
 
         n = df.FacetNormal(mesh)
-        self.boundary_load = df.dot(model.traction(n), n) * ds(marker)
-        self.boundary_disp = df.dot(model.d, n) * ds(marker)
+        if direction is None:
+            direction = n
+        self.boundary_load = df.dot(model.traction(n), direction) * ds(marker)
+        self.boundary_disp = df.dot(model.u, direction) * ds(marker)
         self.area = df.assemble(1.0 * ds(marker))
 
         self.load = []
         self.disp = []
-        self.ts = []
 
         self.plot = None
 
@@ -117,21 +115,11 @@ class LoadDisplacementCurve:
         disp = df.assemble(self.boundary_disp) / self.area
         self.load.append(load)
         self.disp.append(disp)
-        self.ts.append(t)
-        if self.plot:
+        if self.plot is not None:
             self.plot(disp, load)
 
-    def integrate(self):
-        return trapz(self.load, self.disp)
-
     def show(self, fmt="-rx"):
-        from fenics_helpers.plotting import AdaptivePlot
-
-        self.plot = AdaptivePlot(fmt)
-
-    def keep_plot(self):
-        self.plot.keep()
-
+        self.plot = fh.plotting.AdaptivePlot(fmt)
 
 class Problem:
     def __init__(self, mat, mesh, order=1):
@@ -142,14 +130,12 @@ class Problem:
         self.k = df.Function(self.W_k)
 
         self.W = df.VectorFunctionSpace(mesh, "P", order)
-        self.W_d = self.W
         self.u = df.Function(self.W)
-        self.d = self.u
 
         self.eeq = ModifiedMises(1, mat.nu)
 
     def eps(self):
-        return df.sym(df.grad(self.d))
+        return df.sym(df.grad(self.u))
     
     def sigma(self):
         eps = self.eps()
@@ -167,17 +153,15 @@ class Problem:
         self.k.assign(df.project(max(self.k, self.eeq(self.eps()))))
 
     def get_solver(self, bcs):
-        v = df.TestFunction(self.W)
-        dd = df.TrialFunction(self.W)
 
+        df.parameters["form_compiler"]["quadrature_degree"] = 3
         # elastic potential
         Psi0 = 0.5 * df.inner(self.sigma(), self.eps()) 
         # damaged elastic potential
-        area = df.Expression("0.4 < x[0] && x[0] < 0.6 ? 0.9 : 1.", degree=3)
-        Psi = (1. - omega(self.k)) * Psi0 *area*df.dx 
+        Psi = (1. - omega(self.k)) * Psi0 *df.dx 
 
-        F = df.derivative(Psi, self.u, v)
-        J = df.derivative(F, self.u, dd)
+        F = df.derivative(Psi, self.u, df.TestFunction(self.W))
+        J = df.derivative(F, self.u, df.TrialFunction(self.W))
 
         problem = df.NonlinearVariationalProblem(F, self.u, bcs, J=J)
         solver = df.NonlinearVariationalSolver(problem)
@@ -189,19 +173,18 @@ class Problem:
 
         return solver
 
-df.parameters["form_compiler"]["quadrature_degree"] = 3
 
 problem = Problem(Mat(), l_panel_mesh(10, 10))
 
 bot = fh.boundary.plane_at(0, "y") 
 right = fh.boundary.plane_at(0, "x") 
 
-bc_top_expr=df.Expression("du * t", du=0.0002, t=0, degree=0)
+bc_top_expr=df.Expression("du * t", du=0.02, t=0, degree=0)
 
-bc_bot = df.DirichletBC(problem.W_d, [0, 0], bot)
-bc_top = df.DirichletBC(problem.W_d.sub(1), bc_top_expr, right)
+bc_bot = df.DirichletBC(problem.W, [0, 0], bot)
+bc_top = df.DirichletBC(problem.W.sub(1), bc_top_expr, right)
 
-ld = LoadDisplacementCurve(problem, right)
+ld = LoadDisplacementCurve(problem, right, direction=df.Constant((0, 1)))
 ld.show()
 
 solver = problem.get_solver([bc_bot, bc_top])
@@ -216,5 +199,5 @@ def pp(t):
     ld(t)
 
 fh.timestepping.TimeStepper(solve, pp, u=problem.u).adaptive(2)
-ld.keep_plot()
+ld.plot.keep()
 
