@@ -4,8 +4,8 @@ services: docker
 dist: trusty
 
 before_script:
-    - travis_retry timeout 120 docker pull fenicsproject/stable
-    - docker run -itd --name dock -v $(pwd):/home/fenics/shared fenicsproject/stable
+    - travis_retry timeout 120 docker pull quay.io/fenicsproject/stable
+    - docker run -itd --name dock -v $(pwd):/home/fenics/shared quay.io/fenicsproject/stable
 
 script:
     - docker exec dock bash -c "pip3 install --no-cache-dir hypothesis tqdm"
