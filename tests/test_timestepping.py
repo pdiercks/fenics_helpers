@@ -16,20 +16,14 @@ class DeterministicSolve:
     """
     def __init__(self):
         self.memory = {}
-        self.same_value_counter = 0
         random.seed(6174)
 
     def __call__(self, t, dt):
         value = self.memory.get((t, dt))
 
-        if self.same_value_counter > 100:
-            raise RuntimeError("Same value requested more than 100 times.")
-
         if value is not None:
-            self.same_value_counter += 1
             return 3, value
 
-        self.same_value_counter = 0
         value = random.choice([True, True, True, True, False])
         if dt < 1.e-5:
             value = True
