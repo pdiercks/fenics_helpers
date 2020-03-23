@@ -32,8 +32,8 @@ def l_panel_mesh(lx, ly, refinement=5, show=False):
     e.init_cells(6)
     e.add_cell(0, [0, 1, 3])
     e.add_cell(1, [1, 2, 3])
-    e.add_cell(2, [0, 3, 4])
-    e.add_cell(3, [0, 4, 5])
+    e.add_cell(2, [0, 3, 5])
+    e.add_cell(3, [5, 3, 4])
     e.add_cell(4, [0, 5, 7])
     e.add_cell(5, [7, 5, 6])
 
@@ -57,11 +57,11 @@ def max(a, b):
 
 class Mat:
     E= 20000
-    nu = 0.15
+    nu = 0.25
     ft = 4.
-    Gf = 0.05
+    Gf = 0.008
     alpha = 0.99
-    l = 0.05
+    l = 1.0
 
 def omega(k):
     k0 = Mat.ft / Mat.E
@@ -127,7 +127,7 @@ class Problem:
         lmbda = E * nu / (1. + nu) / (1. - 2. * nu)
         mu = E / 2. / (1. + nu)
 
-        return 2 * mu * eps + lmbda * df.tr(eps) * df.Identity(self.mesh.geometric_dimension())
+        return 2 * mu * eps + lmbda * df.tr(eps) * df.Identity(2)
 
     def traction(self, n):
         return df.dot((1.-omega(self.k))*self.sigma(), n)
@@ -142,7 +142,7 @@ class Problem:
         
     def get_solver(self, bcs):
 
-        df.parameters["form_compiler"]["quadrature_degree"] = 2
+        # df.parameters["form_compiler"]["quadrature_degree"] = 2
         r_d = df.inner(self.eps(self.v_d), (1.-omega(self.kappa())) * self.sigma()) * df.dx
         r_e = self.v_e * (self.e - self.eeq(self.eps())) * df.dx + df.dot(df.grad(self.v_e), Mat.l**2 * df.grad(self.e)) * df.dx
         
@@ -211,14 +211,14 @@ class Plotter:
         self.plot.write(self.model.u, t)
         self.plot.write(self.model.k, t)
 
-problem = Problem(Mat(), l_panel_mesh(1, 1, refinement=4), order=2)
+problem = Problem(Mat(), l_panel_mesh(10, 10, refinement=5), order=1)
 
-bot = fh.boundary.plane_at(-1, "y") 
-right = fh.boundary.plane_at(1, "x") 
+bot = fh.boundary.plane_at(-10, "y") 
+right = fh.boundary.plane_at(10, "x") 
 
-bc_top_expr=df.Expression("du * t", du=0.05, t=0, degree=0)
+bc_top_expr=df.Expression("du * t", du=0.1, t=0, degree=0)
 
-bc_bot = df.DirichletBC(problem.W_d, [0, 0], bot)
+bc_bot = df.DirichletBC(problem.W_d.sub(1), 0, bot)
 bc_top_x = df.DirichletBC(problem.W_d.sub(0), 0, right)
 bc_top_y = df.DirichletBC(problem.W_d.sub(1), bc_top_expr, right)
 
@@ -238,7 +238,7 @@ def pp(t):
     plot_2d(t)
 
 ts = fh.timestepping.TimeStepper(solve, pp, u=problem.u)
-ts.increase_num_iter = 6
+ts.increase_num_iter = 7
 ts.adaptive(1)
 ld.plot.keep()
 
