@@ -21,3 +21,7 @@ and `.timestepping` is used to reduce the time step size only at critical points
 
 ![stuff](examples/load_displacement_curve.png)
 
+Example `stdout`:
+
+![stuff](examples/example_output.png)
+
