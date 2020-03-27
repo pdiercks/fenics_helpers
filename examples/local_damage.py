@@ -57,11 +57,10 @@ def max(a, b):
 
 class Mat:
     E= 20000
-    nu = 0.25
+    nu = 0.20
     ft = 4.
-    Gf = 0.008
+    Gf = 0.2
     alpha = 0.99
-    l = 1.0
 
 def omega(k):
     k0 = Mat.ft / Mat.E
@@ -88,6 +87,7 @@ class ModifiedMises:
 
     def __call__(self, eps):
         I1 = df.tr(eps)
+        # return I1
         J2 = 0.5 * df.tr(df.dot(eps, eps)) - 1. / 6. * df.tr(eps) * df.tr(eps)
 
         A = (self.T2 * I1) ** 2 + self.T3 * J2
@@ -100,18 +100,11 @@ class Problem:
         self.mat = mat
         self.mesh = mesh
 
-        vp = df.VectorElement("P", mesh.ufl_cell(), order)
-        p = df.FiniteElement("P", mesh.ufl_cell(), order)
-
-        mixed_element = vp * p
-        self.W = df.FunctionSpace(mesh, mixed_element)
-        self.W_d, self.W_e = self.W.split()
+        self.W = df.VectorFunctionSpace(mesh, "P", order)
         self.W_k = df.FunctionSpace(mesh, "P", order)
 
-        self.u = df.Function(self.W)
-        self.d, self.e = df.split(self.u)
+        self.d = df.Function(self.W)
         self.v = df.TestFunction(self.W)
-        self.v_d, self.v_e = df.TestFunctions(self.W)
 
         self.k = df.Function(self.W_k)
 
@@ -133,23 +126,18 @@ class Problem:
         return df.dot((1.-omega(self.k))*self.sigma(), n)
 
     def kappa(self):
-        return max(self.k, self.e)
+        return max(self.k, self.eeq(self.eps(self.d)))
 
     def update(self):
-        d, e = self.u.split(deepcopy=True)
-        new_k = np.maximum(self.k.vector().get_local(), e.vector().get_local())
-        self.k.vector().set_local(new_k)
+        self.k.assign(df.project(self.kappa()))
         
     def get_solver(self, bcs):
 
-        # df.parameters["form_compiler"]["quadrature_degree"] = 2
-        r_d = df.inner(self.eps(self.v_d), (1.-omega(self.kappa())) * self.sigma()) * df.dx
-        r_e = self.v_e * (self.e - self.eeq(self.eps())) * df.dx + df.dot(df.grad(self.v_e), Mat.l**2 * df.grad(self.e)) * df.dx
-        
-        F = r_d + r_e
-        J = df.derivative(F, self.u)
+        df.parameters["form_compiler"]["quadrature_degree"] = 2
+        F = df.inner(self.eps(self.v), (1.-omega(self.kappa())) * self.sigma()) * df.dx
+        J = df.derivative(F, self.d)
 
-        problem = df.NonlinearVariationalProblem(F, self.u, bcs, J=J)
+        problem = df.NonlinearVariationalProblem(F, self.d, bcs, J=J)
         solver = df.NonlinearVariationalSolver(problem)
         solver.parameters["nonlinear_solver"] = "snes"
         solver.parameters["snes_solver"]["error_on_nonconvergence"] = False
@@ -208,19 +196,18 @@ class Plotter:
         self.plot.parameters["functions_share_mesh"] = True
 
     def __call__(self, t):
-        self.plot.write(self.model.u, t)
-        self.plot.write(self.model.k, t)
+        self.plot.write(self.model.d, t)
 
-problem = Problem(Mat(), l_panel_mesh(10, 10, refinement=5), order=1)
+problem = Problem(Mat(), l_panel_mesh(10, 10, refinement=4), order=1)
 
 bot = fh.boundary.plane_at(-10, "y") 
 right = fh.boundary.plane_at(10, "x") 
 
-bc_top_expr=df.Expression("du * t", du=0.1, t=0, degree=0)
+bc_top_expr=df.Expression("du * t", du=0.5, t=0, degree=0)
 
-bc_bot = df.DirichletBC(problem.W_d.sub(1), 0, bot)
-bc_top_x = df.DirichletBC(problem.W_d.sub(0), 0, right)
-bc_top_y = df.DirichletBC(problem.W_d.sub(1), bc_top_expr, right)
+bc_bot = df.DirichletBC(problem.W, [0,0], bot)
+bc_top_x = df.DirichletBC(problem.W.sub(0), 0, right)
+bc_top_y = df.DirichletBC(problem.W.sub(1), bc_top_expr, right)
 
 ld = LoadDisplacementCurve(problem, right, direction=df.Constant((0, 1)))
 ld.show()
@@ -237,7 +224,7 @@ def pp(t):
     ld(t)
     plot_2d(t)
 
-ts = fh.timestepping.TimeStepper(solve, pp, u=problem.u)
+ts = fh.timestepping.TimeStepper(solve, pp, u=problem.d)
 ts.increase_num_iter = 7
 ts.adaptive(1)
 ld.plot.keep()
