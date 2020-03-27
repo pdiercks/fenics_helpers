@@ -87,7 +87,6 @@ class ModifiedMises:
 
     def __call__(self, eps):
         I1 = df.tr(eps)
-        # return I1
         J2 = 0.5 * df.tr(df.dot(eps, eps)) - 1. / 6. * df.tr(eps) * df.tr(eps)
 
         A = (self.T2 * I1) ** 2 + self.T3 * J2
@@ -104,7 +103,7 @@ class Problem:
         self.W_k = df.FunctionSpace(mesh, "P", order)
 
         self.d = df.Function(self.W)
-        self.v = df.TestFunction(self.W)
+        # self.v = df.TestFunction(self.W)
 
         self.k = df.Function(self.W_k)
 
@@ -132,18 +131,21 @@ class Problem:
         self.k.assign(df.project(self.kappa()))
         
     def get_solver(self, bcs):
-
         df.parameters["form_compiler"]["quadrature_degree"] = 2
-        F = df.inner(self.eps(self.v), (1.-omega(self.kappa())) * self.sigma()) * df.dx
+
+        v = df.TestFunction(self.W)
+        F = df.inner(self.eps(v), (1.-omega(self.kappa())) * self.sigma()) * df.dx
         J = df.derivative(F, self.d)
 
         problem = df.NonlinearVariationalProblem(F, self.d, bcs, J=J)
         solver = df.NonlinearVariationalSolver(problem)
         solver.parameters["nonlinear_solver"] = "snes"
+        solver.parameters["symmetric"] = True
         solver.parameters["snes_solver"]["error_on_nonconvergence"] = False
         solver.parameters["snes_solver"]["line_search"] = "bt"
         solver.parameters["snes_solver"]["linear_solver"] = "mumps"
         solver.parameters["snes_solver"]["maximum_iterations"] = 10
+        solver.parameters["snes_solver"]["report"] = False
 
         return solver
 
@@ -194,11 +196,19 @@ class Plotter:
             filename = "out.xdmf"
         self.plot = df.XDMFFile(filename)
         self.plot.parameters["functions_share_mesh"] = True
+        
+        self.model.d.rename("u", "u")
+        self.model.k.rename("kappa", "kappa")
 
     def __call__(self, t):
         self.plot.write(self.model.d, t)
+        self.plot.write(self.model.k, t)
 
 problem = Problem(Mat(), l_panel_mesh(10, 10, refinement=4), order=1)
+
+# =====================================================
+#   Select boundaries via the fh.boundary module
+# =====================================================
 
 bot = fh.boundary.plane_at(-10, "y") 
 right = fh.boundary.plane_at(10, "x") 
@@ -211,9 +221,17 @@ bc_top_y = df.DirichletBC(problem.W.sub(1), bc_top_expr, right)
 
 ld = LoadDisplacementCurve(problem, right, direction=df.Constant((0, 1)))
 ld.show()
+ld.plot.ax.set_ylabel("load [N]")
+ld.plot.ax.set_xlabel("displacement [mm]")
+
 plot_2d = Plotter(problem)
 
 solver = problem.get_solver([bc_bot, bc_top_y])
+
+# =====================================================
+#   Define solve() and pp() to use by the 
+#     fh.timestepping module
+# =====================================================
 
 def solve(t, dt):
     bc_top_expr.t=t
