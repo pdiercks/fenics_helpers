@@ -10,14 +10,14 @@ Little Helper classes that come up repeatedly when writing solvers in FEniCS
 
 ![local damage plot](examples/kappa_plot.png)
 
-The [local damage](examples(local_damage.py) example illustrates the use of `.boundary` to conveniently select the boundaries like
+The [local damage](examples/local_damage.py) example illustrates the use of `.boundary` to conveniently select the boundaries like
 
 ~~~py
 bot = fh.boundary.plane_at(-10, "y") 
 right = fh.boundary.plane_at(10, "x") 
 ~~~
 
-and `.timestepping` is used to reduce the time step size only at critical points in the simulation to accelerate the time integration.
+and the adaptive `.timestepping` module.
 
 ![stuff](examples/load_displacement_curve.png)
 
