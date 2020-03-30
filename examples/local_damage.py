@@ -2,6 +2,7 @@ import numpy as np
 import dolfin as df
 import fenics_helpers as fh
 
+
 def l_panel_mesh(lx, ly, refinement=5, show=False):
     """
     Creates something like
@@ -46,8 +47,8 @@ def l_panel_mesh(lx, ly, refinement=5, show=False):
     if show:
         df.plot(mesh)
         import matplotlib.pyplot as plt
-        plt.show()
 
+        plt.show()
 
     return mesh
 
@@ -55,19 +56,22 @@ def l_panel_mesh(lx, ly, refinement=5, show=False):
 def max(a, b):
     return 0.5 * (a + b + abs(a - b))
 
+
 class Mat:
-    E= 20000
+    E = 20000
     nu = 0.20
-    ft = 4.
+    ft = 4.0
     Gf = 0.2
     alpha = 0.99
+
 
 def omega(k):
     k0 = Mat.ft / Mat.E
     beta = Mat.ft / Mat.Gf
     exponent = beta * (k0 - k)
-    omega = 1.0 - k0 / k* (1.0 - Mat.alpha + Mat.alpha * df.exp(exponent))
+    omega = 1.0 - k0 / k * (1.0 - Mat.alpha + Mat.alpha * df.exp(exponent))
     return df.conditional(df.lt(k, k0), 0, omega)
+
 
 class ModifiedMises:
     """ Modified von Mises equivalent strain, see
@@ -78,21 +82,23 @@ class ModifiedMises:
 
     The members T1, T2, T3 correspond to the term 1,2,3 in the equation
     """
+
     def __init__(self, k, nu):
         self.k = k
         self.nu = nu
-        self.T1 = (k - 1) / (2. * k * (1. - 2. * nu))
-        self.T2 = (k - 1) / (1. - 2. * nu)
-        self.T3 = 12. * k / ((1. + nu) * (1. + nu))
+        self.T1 = (k - 1) / (2.0 * k * (1.0 - 2.0 * nu))
+        self.T2 = (k - 1) / (1.0 - 2.0 * nu)
+        self.T3 = 12.0 * k / ((1.0 + nu) * (1.0 + nu))
 
     def __call__(self, eps):
         I1 = df.tr(eps)
-        J2 = 0.5 * df.tr(df.dot(eps, eps)) - 1. / 6. * df.tr(eps) * df.tr(eps)
+        J2 = 0.5 * df.tr(df.dot(eps, eps)) - 1.0 / 6.0 * df.tr(eps) * df.tr(eps)
 
         A = (self.T2 * I1) ** 2 + self.T3 * J2
-        A_pos = max(A, 1.e-14)
+        A_pos = max(A, 1.0e-14)
 
-        return self.T1 * I1 + df.sqrt(A_pos) / (2. * self.k)
+        return self.T1 * I1 + df.sqrt(A_pos) / (2.0 * self.k)
+
 
 class Problem:
     def __init__(self, mat, mesh, order=1):
@@ -113,28 +119,28 @@ class Problem:
         if d is None:
             d = self.d
         return df.sym(df.grad(d))
-    
+
     def sigma(self):
         eps, E, nu = self.eps(), self.mat.E, self.mat.nu
-        lmbda = E * nu / (1. + nu) / (1. - 2. * nu)
-        mu = E / 2. / (1. + nu)
+        lmbda = E * nu / (1.0 + nu) / (1.0 - 2.0 * nu)
+        mu = E / 2.0 / (1.0 + nu)
 
         return 2 * mu * eps + lmbda * df.tr(eps) * df.Identity(2)
 
     def traction(self, n):
-        return df.dot((1.-omega(self.k))*self.sigma(), n)
+        return df.dot((1.0 - omega(self.k)) * self.sigma(), n)
 
     def kappa(self):
         return max(self.k, self.eeq(self.eps(self.d)))
 
     def update(self):
         self.k.assign(df.project(self.kappa()))
-        
+
     def get_solver(self, bcs):
         df.parameters["form_compiler"]["quadrature_degree"] = 2
 
         v = df.TestFunction(self.W)
-        F = df.inner(self.eps(v), (1.-omega(self.kappa())) * self.sigma()) * df.dx
+        F = df.inner(self.eps(v), (1.0 - omega(self.kappa())) * self.sigma()) * df.dx
         J = df.derivative(F, self.d)
 
         problem = df.NonlinearVariationalProblem(F, self.d, bcs, J=J)
@@ -189,6 +195,7 @@ class LoadDisplacementCurve:
     def show(self, fmt="-rx"):
         self.plot = fh.plotting.AdaptivePlot(fmt)
 
+
 class Plotter:
     def __init__(self, model, filename=None):
         self.model = model
@@ -196,7 +203,7 @@ class Plotter:
             filename = "out.xdmf"
         self.plot = df.XDMFFile(filename)
         self.plot.parameters["functions_share_mesh"] = True
-        
+
         self.model.d.rename("u", "u")
         self.model.k.rename("kappa", "kappa")
 
@@ -204,18 +211,19 @@ class Plotter:
         self.plot.write(self.model.d, t)
         self.plot.write(self.model.k, t)
 
+
 problem = Problem(Mat(), l_panel_mesh(10, 10, refinement=4), order=1)
 
 # =====================================================
 #   Select boundaries via the fh.boundary module
 # =====================================================
 
-bot = fh.boundary.plane_at(-10, "y") 
-right = fh.boundary.plane_at(10, "x") 
+bot = fh.boundary.plane_at(-10, "y")
+right = fh.boundary.plane_at(10, "x")
 
-bc_top_expr=df.Expression("du * t", du=0.5, t=0, degree=0)
+bc_top_expr = df.Expression("du * t", du=0.5, t=0, degree=0)
 
-bc_bot = df.DirichletBC(problem.W, [0,0], bot)
+bc_bot = df.DirichletBC(problem.W, [0, 0], bot)
 bc_top_x = df.DirichletBC(problem.W.sub(0), 0, right)
 bc_top_y = df.DirichletBC(problem.W.sub(1), bc_top_expr, right)
 
@@ -229,21 +237,23 @@ plot_2d = Plotter(problem)
 solver = problem.get_solver([bc_bot, bc_top_y])
 
 # =====================================================
-#   Define solve() and pp() to use by the 
+#   Define solve() and pp() to use by the
 #     fh.timestepping module
 # =====================================================
 
+
 def solve(t, dt):
-    bc_top_expr.t=t
+    bc_top_expr.t = t
     return solver.solve()
+
 
 def pp(t):
     problem.update()
     ld(t)
     plot_2d(t)
 
+
 ts = fh.timestepping.TimeStepper(solve, pp, u=problem.d)
 ts.increase_num_iter = 7
 ts.adaptive(1)
 ld.plot.keep()
-
