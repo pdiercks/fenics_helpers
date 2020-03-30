@@ -197,10 +197,8 @@ class LoadDisplacementCurve:
 
 
 class Plotter:
-    def __init__(self, model, filename=None):
+    def __init__(self, model, filename="out.xdmf"):
         self.model = model
-        if filename is None:
-            filename = "out.xdmf"
         self.plot = df.XDMFFile(filename)
         self.plot.parameters["functions_share_mesh"] = True
 
@@ -255,5 +253,5 @@ def pp(t):
 
 ts = fh.timestepping.TimeStepper(solve, pp, u=problem.d)
 ts.increase_num_iter = 7
-ts.adaptive(1)
+ts.adaptive(1.0)
 ld.plot.keep()
