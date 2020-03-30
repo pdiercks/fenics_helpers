@@ -125,7 +125,7 @@ class Problem:
         lmbda = E * nu / (1.0 + nu) / (1.0 - 2.0 * nu)
         mu = E / 2.0 / (1.0 + nu)
 
-        return 2 * mu * eps + lmbda * df.tr(eps) * df.Identity(2)
+        return 2 * mu * eps + lmbda * df.tr(eps) * df.Identity(self.mesh.geometric_dimension())
 
     def traction(self, n):
         return df.dot((1.0 - omega(self.k)) * self.sigma(), n)
@@ -253,5 +253,5 @@ def pp(t):
 
 ts = fh.timestepping.TimeStepper(solve, pp, u=problem.d)
 ts.increase_num_iter = 7
-ts.adaptive(1.0)
+ts.adaptive(t_end=1.0)
 ld.plot.keep()
