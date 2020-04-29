@@ -42,4 +42,3 @@ and the adaptive `.timestepping` module.
 Example `stdout`:
 
 ![stuff](examples/example_output.png)
-
