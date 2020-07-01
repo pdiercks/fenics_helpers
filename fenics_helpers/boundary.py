@@ -82,9 +82,6 @@ def point_at(p, eps=1.0e-10):
     class B(SubDomain):
         def inside(self, x, on_boundary):
             assert len(p) == len(x)
-            for i in range(len(x)):
-                if not p[i] - eps < x[i] < p[i] + eps:
-                    return False
-            return True
+            return all(near(x_i, p_i, eps) for x_i, p_i in zip(x, p))
 
     return B()
