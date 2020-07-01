@@ -34,7 +34,7 @@ class TestBoundary(unittest.TestCase):
     def test_point_at(self):
         b = boundary.point_at([0,0])
         self.assertTrue(b.inside([0,0], True))
-        self.assertFalse(b.inside([0,0], False))
+        self.assertTrue(b.inside([0,0], False))
         self.assertFalse(b.inside([1,0], True))
 
 if __name__ == "__main__":

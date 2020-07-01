@@ -73,5 +73,15 @@ def point_at(p, eps=1.0e-10):
     """
     Creates a dolfin.SubDomain that only contains boundary points that 
     are near `p` (within a tolerance `eps`).
+
+    Corresponding FEniCS DirichletBCs have to be applied with
+    method="pointwise", which somehow passes "on_boundary=False". Thus, we
+    ignore the on_boundary argument.
     """
-    return within_range(p, p, eps)
+
+    class B(SubDomain):
+        def inside(self, x, on_boundary):
+            assert len(p) == len(x)
+            return all(near(x_i, p_i, eps) for x_i, p_i in zip(x, p))
+
+    return B()
