@@ -1,7 +1,8 @@
 # -*- coding: utf-8 -*-
 """Runge Kutta methods."""
 import numpy as np
-from scipy import array, sqrt
+from numpy import array
+from numpy.lib.scimath import sqrt
 
 import dolfin as d
 import ufl
