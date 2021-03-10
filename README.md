@@ -23,6 +23,10 @@ setuptools.setup(
     ...
 )
 ~~~
+- via conda
+~~~
+> conda install --channel pdiercks fenics_helpers
+~~~
 
 # Example: Local damage model
 
